@@ -172,13 +172,13 @@ const GatewayDetail: React.FC = () => {
   // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ONLINE':
+      case 'online':
         return 'green';
-      case 'OFFLINE':
+      case 'offline':
         return 'red';
-      case 'MAINTENANCE':
+      case 'maintenance':
         return 'orange';
-      case 'DEGRADED':
+      case 'degraded':
         return 'yellow';
       default:
         return 'gray';
@@ -188,12 +188,14 @@ const GatewayDetail: React.FC = () => {
   // Get gateway type badge color
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'STANDALONE':
+      case 'standalone':
         return 'blue';
-      case 'CLUSTER':
+      case 'master':
         return 'purple';
-      case 'EDGE':
+      case 'region':
         return 'teal';
+      case 'site':
+        return 'orange';
       default:
         return 'gray';
     }

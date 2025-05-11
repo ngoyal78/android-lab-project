@@ -20,7 +20,7 @@ from ..schemas.target_gateway_association import (
     TargetGatewayAssociationBulkDelete,
     TargetGatewayAssociationFilter
 )
-from ..auth import get_current_user, get_current_active_user, get_current_admin_user
+from ..auth import get_current_user, get_current_active_user, get_admin_user
 from ..models.user import User
 
 router = APIRouter(
@@ -221,7 +221,7 @@ async def delete_association(
 async def bulk_create_associations(
     bulk_create: TargetGatewayAssociationBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Create multiple target-gateway associations in bulk.
@@ -284,7 +284,7 @@ async def bulk_create_associations(
 async def bulk_delete_associations(
     bulk_delete: TargetGatewayAssociationBulkDelete,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Delete multiple target-gateway associations in bulk.
@@ -377,7 +377,7 @@ async def check_association_health(
 async def auto_cleanup_inactive_associations(
     inactivity_hours: int = 24,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    current_user: User = Depends(get_admin_user)
 ):
     """
     Automatically clean up associations that have been inactive for a specified period.

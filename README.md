@@ -25,6 +25,7 @@ The Android Lab Platform provides a centralized system for managing and accessin
   - [Android Devices](#android-devices)
   - [Raspberry Pi / Linux Devices](#raspberry-pi--linux-devices)
 - [Troubleshooting](#troubleshooting)
+- [Additional Scripts](#additional-scripts)
 - [API Documentation](#api-documentation)
 - [License](#license)
 
@@ -71,7 +72,7 @@ The solution consists of four main components:
    
    # Create and activate virtual environment
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: source venv\\Scripts\\activate
    
    # Install dependencies
    pip install -r requirements.txt
@@ -113,8 +114,16 @@ The solution consists of four main components:
 
 5. **Start the backend server**:
    ```bash
+   # On Windows:
+   python run_server.py  # Use this script to handle Python module imports correctly on Windows
+   
+   # On Linux/macOS:
    python run.py
    ```
+
+   The backend server will be available at http://localhost:8000 with API documentation at http://localhost:8000/docs
+
+   Note: The backend server must be running before starting the gateway service.
 
 ### Frontend Setup
 
@@ -162,9 +171,28 @@ The solution consists of four main components:
    nano .env
    ```
 
+   Important settings in the .env file:
+   ```
+   # Server URL (required)
+   SERVER_URL=http://localhost:8000
+
+   # WebSocket URL for receiving commands (required)
+   # This must match the WebSocket endpoint in the backend
+   WEBSOCKET_URL=ws://localhost:8000/ws/gateway
+
+   # Authentication credentials
+   USERNAME=admin
+   PASSWORD=admin
+   ```
+
 3. **Start the gateway**:
    ```bash
+   # On Linux/macOS:
    python run.py
+   
+   # On Windows:
+   # Use the provided batch file
+   run_gateway.bat
    ```
 
 ## User Guide
@@ -344,6 +372,11 @@ The solution consists of four main components:
    - Verify JWT_SECRET_KEY is set correctly
    - Check token expiration time
 
+3. **Import errors on Windows**:
+   - If you encounter `ImportError: attempted relative import beyond top-level package` or `ModuleNotFoundError: No module named 'backend'` errors
+   - Use the provided `run_server.py` script which properly configures Python module paths
+   - Alternatively, you can run the server as a module: `python -m backend.run`
+
 ### Frontend Issues
 
 1. **API connection errors**:
@@ -357,22 +390,44 @@ The solution consists of four main components:
    - Verify network connectivity between gateway and server
    - Check authentication credentials
    - Ensure WebSocket server is running
+   - Verify the WebSocket URL in gateway/.env matches the backend endpoint (ws://localhost:8000/ws/gateway)
+   - Check gateway_agent.log for connection errors
 
 ### Remote Access Issues
 
-1. **Agent connection failures**:
+1. **"Failed to fetch devices" error on Remote Access page**:
+   - Ensure the gateway service is running:
+     - On Linux/macOS: `cd gateway && python run.py`
+     - On Windows: `cd gateway && run_gateway.bat`
+   - Check if the gateway service has the required Python packages installed: `pip install -r gateway/requirements.txt`
+   - Verify the gateway is properly configured in `gateway/.env` file
+   - Check gateway logs for connection issues: `cat gateway/gateway_agent.log` (on Linux/macOS) or check the gateway_agent.log file in the gateway directory (on Windows)
+
+2. **Agent connection failures**:
    - Check network connectivity
    - Verify AUTH_TOKEN is valid
    - Check agent logs: `cat remote_access_agent.log`
 
-2. **SSH tunnel problems**:
+3. **SSH tunnel problems**:
    - Verify SSH server is running
    - Check if ports are blocked by firewall
    - Test local port accessibility: `nc -zv localhost <LOCAL_PORT>`
 
-3. **Authentication errors**:
+4. **Authentication errors**:
    - Regenerate the authentication token
    - Verify the token is correctly copied to the .env file
+
+## Additional Scripts
+
+### run_server.py
+
+The `run_server.py` script was created to solve Python module import issues that can occur on Windows systems. It works by:
+
+1. Adding the parent directory to the Python path
+2. Properly configuring the import paths for the backend modules
+3. Starting the server with the correct module configuration
+
+This script is particularly useful on Windows where relative imports can sometimes cause issues. If you encounter import errors when running the standard `run.py` script, use `run_server.py` instead.
 
 ## API Documentation
 

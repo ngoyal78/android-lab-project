@@ -5,9 +5,9 @@ export interface Gateway {
   gateway_id: string;
   name: string;
   description?: string;
-  gateway_type: 'STANDALONE' | 'CLUSTER' | 'EDGE';
+  gateway_type: 'master' | 'region' | 'site' | 'standalone';
   parent_gateway_id?: string;
-  status: 'ONLINE' | 'OFFLINE' | 'MAINTENANCE' | 'DEGRADED';
+  status: 'online' | 'offline' | 'maintenance' | 'degraded';
   hostname?: string;
   ip_address?: string;
   ssh_port?: number;
