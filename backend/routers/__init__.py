@@ -12,6 +12,7 @@ from .artifacts import router as artifacts_router
 from .ws import router as ws_router
 from .tests import router as tests_router
 from .target_management import router as target_management_router
+from .remote_access import router as remote_access_router
 
 __all__ = [
     "auth_router",
@@ -21,5 +22,6 @@ __all__ = [
     "artifacts_router",
     "ws_router",
     "tests_router",
-    "target_management_router"
+    "target_management_router",
+    "remote_access_router"
 ]
