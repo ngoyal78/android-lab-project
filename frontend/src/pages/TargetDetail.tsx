@@ -36,7 +36,7 @@ interface LogEntry {
 
 const TargetDetail: React.FC = () => {
   const { id = '' } = useParams<{ id: string }>();
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, authToken } = useAuth();
   const [target, setTarget] = useState<Target | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'console' | 'test' | 'logs'>('info');
@@ -112,8 +112,10 @@ const TargetDetail: React.FC = () => {
 
   const handleReserveTarget = async () => {
     try {
-      // In a real app, this would be an actual API call
-      await axios.post(`/api/targets/${id}/reserve`);
+      // Make the actual API call with auth token
+      await axios.post(`/api/targets/${id}/reserve`, {}, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
       
       // Update the target status
       if (target) {
@@ -142,8 +144,10 @@ const TargetDetail: React.FC = () => {
 
   const handleReleaseTarget = async () => {
     try {
-      // In a real app, this would be an actual API call
-      await axios.post(`/api/targets/${id}/release`);
+      // Make the actual API call with auth token
+      await axios.post(`/api/targets/${id}/release`, {}, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
       
       // Update the target status
       if (target) {

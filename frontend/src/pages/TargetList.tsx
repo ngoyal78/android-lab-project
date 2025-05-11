@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Target {
   id: string;
@@ -17,12 +18,55 @@ interface Target {
 }
 
 const TargetList: React.FC = () => {
+  const { user, authToken } = useAuth();
   const [targets, setTargets] = useState<Target[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  // Handle reserving a target
+  const handleReserveTarget = async (targetId: string) => {
+    try {
+      await axios.post(`/api/targets/${targetId}/reserve`, {}, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      
+      // Update the target status in the local state
+      setTargets(prevTargets => 
+        prevTargets.map(target => 
+          target.id === targetId 
+            ? { ...target, status: 'reserved', reservedBy: user?.username } 
+            : target
+        )
+      );
+    } catch (err) {
+      console.error('Error reserving target:', err);
+      setError('Failed to reserve target. Please try again later.');
+    }
+  };
+  
+  // Handle releasing a target
+  const handleReleaseTarget = async (targetId: string) => {
+    try {
+      await axios.post(`/api/targets/${targetId}/release`, {}, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      
+      // Update the target status in the local state
+      setTargets(prevTargets => 
+        prevTargets.map(target => 
+          target.id === targetId 
+            ? { ...target, status: 'available', reservedBy: undefined } 
+            : target
+        )
+      );
+    } catch (err) {
+      console.error('Error releasing target:', err);
+      setError('Failed to release target. Please try again later.');
+    }
+  };
 
   useEffect(() => {
     const fetchTargets = async () => {
@@ -290,12 +334,24 @@ const TargetList: React.FC = () => {
                       Details
                     </Link>
                     {target.status === 'available' && (
-                      <button className="text-primary-600 hover:text-primary-900">
+                      <button 
+                        className="text-primary-600 hover:text-primary-900"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleReserveTarget(target.id);
+                        }}
+                      >
                         Reserve
                       </button>
                     )}
-                    {target.status === 'reserved' && target.reservedBy === 'john.doe' && (
-                      <button className="text-red-600 hover:text-red-900">
+                    {target.status === 'reserved' && target.reservedBy === user?.username && (
+                      <button 
+                        className="text-red-600 hover:text-red-900"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleReleaseTarget(target.id);
+                        }}
+                      >
                         Release
                       </button>
                     )}

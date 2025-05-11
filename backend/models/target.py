@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 from ..database import Base
+from .policy_associations import target_policies
 
 class DeviceType(str, enum.Enum):
     PHYSICAL = "physical"
@@ -83,6 +84,7 @@ class TargetDevice(Base):
     # Relationships
     reservations = relationship("Reservation", back_populates="target_device")
     test_jobs = relationship("TestJob", back_populates="target")
+    policies = relationship("ReservationPolicy", secondary=target_policies, back_populates="targets")
     
     # Audit fields
     is_active = Column(Boolean, default=True)

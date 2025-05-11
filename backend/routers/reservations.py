@@ -1,14 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import and_, or_, func
-from typing import List, Any
-from datetime import datetime
+from sqlalchemy import and_, or_, func, desc
+from typing import List, Any, Optional, Dict
+from datetime import datetime, timedelta
 
 from ..database import get_db
-from ..models import User, Reservation, TargetDevice, ReservationStatus, DeviceStatus
-from ..schemas import ReservationCreate, ReservationResponse, ReservationUpdate, ReservationWithDetails
+from ..models import (
+    User, Reservation, TargetDevice, ReservationStatus, DeviceStatus, 
+    ReservationPolicy, ReservationPriority
+)
+from ..schemas import (
+    ReservationCreate, ReservationResponse, ReservationUpdate, 
+    ReservationWithDetails
+)
 from ..auth import get_current_active_user, get_admin_user, get_developer_user
+from ..notifications import notification_manager, NotificationType, EventType
 
 router = APIRouter(
     prefix="/reservations",
@@ -364,3 +371,485 @@ async def delete_reservation(
     await db.commit()
     
     return reservation
+
+@router.get("/availability", response_model=Dict[str, Any])
+async def check_availability(
+    target_id: int = Query(..., description="Target device ID to check availability for"),
+    start_time: datetime = Query(..., description="Start time for the reservation"),
+    end_time: datetime = Query(..., description="End time for the reservation"),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Check if a target is available for reservation during the specified time window.
+    Returns availability status and any conflicting reservations.
+    """
+    # Check if target exists
+    result = await db.execute(select(TargetDevice).filter(TargetDevice.id == target_id))
+    target = result.scalars().first()
+    
+    if not target:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target device not found"
+        )
+    
+    # Check if target is available (not offline, maintenance, etc.)
+    if target.status not in [DeviceStatus.AVAILABLE, DeviceStatus.RESERVED]:
+        return {
+            "available": False,
+            "reason": f"Target is {target.status}",
+            "conflicts": []
+        }
+    
+    # Check for overlapping reservations
+    query = select(
+        Reservation, 
+        User.username.label("username")
+    ).join(
+        User, Reservation.user_id == User.id
+    ).filter(
+        Reservation.target_id == target_id,
+        Reservation.status.in_([ReservationStatus.PENDING, ReservationStatus.ACTIVE]),
+        or_(
+            # New reservation starts during existing reservation
+            and_(
+                Reservation.start_time <= start_time,
+                Reservation.end_time > start_time
+            ),
+            # New reservation ends during existing reservation
+            and_(
+                Reservation.start_time < end_time,
+                Reservation.end_time >= end_time
+            ),
+            # New reservation completely contains existing reservation
+            and_(
+                Reservation.start_time >= start_time,
+                Reservation.end_time <= end_time
+            )
+        )
+    )
+    
+    result = await db.execute(query)
+    conflicts = result.all()
+    
+    if conflicts:
+        conflict_details = []
+        for reservation, username in conflicts:
+            conflict_details.append({
+                "id": reservation.id,
+                "user": username,
+                "start_time": reservation.start_time,
+                "end_time": reservation.end_time,
+                "priority": reservation.priority,
+                "is_admin_override": reservation.is_admin_override
+            })
+        
+        return {
+            "available": False,
+            "reason": "Conflicting reservations exist",
+            "conflicts": conflict_details
+        }
+    
+    # Check if user has reached their daily reservation limit
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    
+    # Get user's policies
+    user_policies_query = select(ReservationPolicy).join(
+        User.policies
+    ).filter(
+        User.id == current_user.id
+    )
+    user_policies_result = await db.execute(user_policies_query)
+    user_policies = user_policies_result.scalars().all()
+    
+    # Get target's policies
+    target_policies_query = select(ReservationPolicy).join(
+        TargetDevice.policies
+    ).filter(
+        TargetDevice.id == target_id
+    )
+    target_policies_result = await db.execute(target_policies_query)
+    target_policies = target_policies_result.scalars().all()
+    
+    # Combine policies and sort by priority
+    all_policies = list(set(user_policies + target_policies))
+    all_policies.sort(key=lambda p: p.priority_level, reverse=True)
+    
+    # If no policies, use default limits
+    max_duration_minutes = 240  # 4 hours
+    max_reservations_per_day = 3
+    cooldown_minutes = 60
+    
+    if all_policies:
+        # Use highest priority policy
+        policy = all_policies[0]
+        max_duration_minutes = policy.max_duration_minutes
+        max_reservations_per_day = policy.max_reservations_per_day
+        cooldown_minutes = policy.cooldown_minutes
+    
+    # Check duration
+    requested_duration = (end_time - start_time).total_seconds() / 60
+    if requested_duration > max_duration_minutes:
+        return {
+            "available": False,
+            "reason": f"Reservation duration exceeds maximum allowed ({max_duration_minutes} minutes)",
+            "conflicts": []
+        }
+    
+    # Check daily limit
+    daily_reservations_query = select(func.count()).select_from(Reservation).filter(
+        Reservation.user_id == current_user.id,
+        Reservation.start_time >= today_start,
+        Reservation.start_time < today_end,
+        Reservation.status != ReservationStatus.CANCELLED
+    )
+    daily_reservations_result = await db.execute(daily_reservations_query)
+    daily_reservations_count = daily_reservations_result.scalar()
+    
+    if daily_reservations_count >= max_reservations_per_day:
+        return {
+            "available": False,
+            "reason": f"You have reached your daily reservation limit ({max_reservations_per_day})",
+            "conflicts": []
+        }
+    
+    # Check cooldown period
+    last_reservation_query = select(Reservation).filter(
+        Reservation.user_id == current_user.id,
+        Reservation.end_time <= start_time,
+        Reservation.status != ReservationStatus.CANCELLED
+    ).order_by(desc(Reservation.end_time)).limit(1)
+    
+    last_reservation_result = await db.execute(last_reservation_query)
+    last_reservation = last_reservation_result.scalars().first()
+    
+    if last_reservation:
+        cooldown_end = last_reservation.end_time + timedelta(minutes=cooldown_minutes)
+        if start_time < cooldown_end:
+            return {
+                "available": False,
+                "reason": f"Cooldown period of {cooldown_minutes} minutes has not elapsed since your last reservation",
+                "conflicts": []
+            }
+    
+    # All checks passed
+    return {
+        "available": True,
+        "reason": "Target is available for reservation",
+        "conflicts": []
+    }
+
+@router.post("/override", response_model=ReservationResponse)
+async def create_override_reservation(
+    reservation_data: ReservationCreate,
+    override_reason: str = Query(..., description="Reason for the override"),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Create a reservation with admin override, bypassing conflict checks.
+    Only admin users can create override reservations.
+    """
+    # Check if target exists
+    result = await db.execute(select(TargetDevice).filter(TargetDevice.id == reservation_data.target_id))
+    target = result.scalars().first()
+    
+    if not target:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target device not found"
+        )
+    
+    # Create new reservation with override flag
+    new_reservation = Reservation(
+        user_id=current_user.id,
+        target_id=reservation_data.target_id,
+        start_time=reservation_data.start_time,
+        end_time=reservation_data.end_time,
+        status=ReservationStatus.PENDING,
+        priority=ReservationPriority.CRITICAL,
+        is_admin_override=True,
+        override_reason=override_reason
+    )
+    
+    # If reservation starts now, mark it as active and update target status
+    now = datetime.utcnow()
+    if new_reservation.start_time <= now and new_reservation.end_time > now:
+        new_reservation.status = ReservationStatus.ACTIVE
+        target.status = DeviceStatus.RESERVED
+    
+    db.add(new_reservation)
+    await db.commit()
+    await db.refresh(new_reservation)
+    
+    # Notify about the override
+    await notification_manager.send_notification(
+        f"Admin override reservation created for {target.name}",
+        NotificationType.WARNING,
+        data={
+            "reservation_id": new_reservation.id,
+            "target_id": target.id,
+            "reason": override_reason
+        }
+    )
+    
+    return new_reservation
+
+@router.post("/expire-stale", response_model=Dict[str, Any])
+async def expire_stale_reservations(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Expire stale reservations based on policy settings.
+    Only admin users can manually trigger this operation.
+    """
+    # This would normally run as a scheduled task, but we're providing a manual trigger
+    background_tasks.add_task(expire_stale_reservations_task, db)
+    
+    return {
+        "message": "Stale reservation expiration process started",
+        "status": "processing"
+    }
+
+async def expire_stale_reservations_task(db: AsyncSession):
+    """Background task to expire stale reservations."""
+    # Get active reservations
+    query = select(
+        Reservation, 
+        TargetDevice,
+        ReservationPolicy
+    ).join(
+        TargetDevice, Reservation.target_id == TargetDevice.id
+    ).outerjoin(
+        ReservationPolicy, Reservation.policy_id == ReservationPolicy.id
+    ).filter(
+        Reservation.status == ReservationStatus.ACTIVE
+    )
+    
+    result = await db.execute(query)
+    active_reservations = result.all()
+    
+    now = datetime.utcnow()
+    expired_count = 0
+    
+    for reservation, target, policy in active_reservations:
+        # Skip admin override reservations
+        if reservation.is_admin_override:
+            continue
+        
+        # Determine auto-expire settings
+        auto_expire_enabled = True
+        auto_expire_minutes = 15  # Default
+        
+        if policy:
+            auto_expire_enabled = policy.auto_expire_enabled
+            auto_expire_minutes = policy.auto_expire_minutes
+        
+        # Check if reservation has expired
+        if auto_expire_enabled and reservation.last_accessed_at:
+            expire_time = reservation.last_accessed_at + timedelta(minutes=auto_expire_minutes)
+            if now > expire_time:
+                # Expire the reservation
+                reservation.status = ReservationStatus.EXPIRED
+                target.status = DeviceStatus.AVAILABLE
+                expired_count += 1
+                
+                # Notify about expiration
+                await notification_manager.send_notification(
+                    f"Reservation for {target.name} has expired due to inactivity",
+                    NotificationType.WARNING,
+                    user_id=reservation.user_id,
+                    data={
+                        "reservation_id": reservation.id,
+                        "target_id": target.id
+                    }
+                )
+    
+    await db.commit()
+    
+    # Log the result
+    logger.info(f"Expired {expired_count} stale reservations")
+
+@router.get("/suggestions", response_model=List[Dict[str, Any]])
+async def get_reservation_suggestions(
+    target_type: Optional[str] = None,
+    duration_minutes: int = Query(60, description="Desired reservation duration in minutes"),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Get smart suggestions for reservations based on past behavior and current availability.
+    """
+    # Get user's past reservations to analyze patterns
+    past_reservations_query = select(
+        Reservation, 
+        TargetDevice.name.label("target_name"),
+        TargetDevice.device_type.label("device_type"),
+        TargetDevice.id.label("target_id")
+    ).join(
+        TargetDevice, Reservation.target_id == TargetDevice.id
+    ).filter(
+        Reservation.user_id == current_user.id,
+        Reservation.status.in_([ReservationStatus.COMPLETED, ReservationStatus.ACTIVE])
+    ).order_by(desc(Reservation.start_time)).limit(10)
+    
+    past_result = await db.execute(past_reservations_query)
+    past_reservations = past_result.all()
+    
+    # Analyze patterns
+    favorite_targets = {}
+    common_durations = {}
+    preferred_times = {}
+    
+    for res, target_name, device_type, target_id in past_reservations:
+        # Track favorite targets
+        if target_id not in favorite_targets:
+            favorite_targets[target_id] = {
+                "count": 0, 
+                "name": target_name, 
+                "type": device_type,
+                "id": target_id
+            }
+        favorite_targets[target_id]["count"] += 1
+        
+        # Track common durations
+        duration = int((res.end_time - res.start_time).total_seconds() / 60)
+        if duration not in common_durations:
+            common_durations[duration] = 0
+        common_durations[duration] += 1
+        
+        # Track preferred times
+        hour = res.start_time.hour
+        if hour not in preferred_times:
+            preferred_times[hour] = 0
+        preferred_times[hour] += 1
+    
+    # Sort by frequency
+    favorite_targets_list = sorted(
+        favorite_targets.values(), 
+        key=lambda x: x["count"], 
+        reverse=True
+    )
+    
+    # Find available targets similar to user's favorites
+    now = datetime.utcnow()
+    suggestions = []
+    
+    # First, check if user's favorite targets are available
+    for favorite in favorite_targets_list[:3]:  # Top 3 favorites
+        target_id = favorite["id"]
+        
+        # Check availability for next 24 hours in 1-hour increments
+        for hour_offset in range(0, 24):
+            start_time = now + timedelta(hours=hour_offset)
+            end_time = start_time + timedelta(minutes=duration_minutes)
+            
+            # Check for conflicts
+            conflicts_query = select(func.count()).select_from(Reservation).filter(
+                Reservation.target_id == target_id,
+                Reservation.status.in_([ReservationStatus.PENDING, ReservationStatus.ACTIVE]),
+                or_(
+                    and_(
+                        Reservation.start_time <= start_time,
+                        Reservation.end_time > start_time
+                    ),
+                    and_(
+                        Reservation.start_time < end_time,
+                        Reservation.end_time >= end_time
+                    ),
+                    and_(
+                        Reservation.start_time >= start_time,
+                        Reservation.end_time <= end_time
+                    )
+                )
+            )
+            
+            conflicts_result = await db.execute(conflicts_query)
+            conflicts_count = conflicts_result.scalar()
+            
+            if conflicts_count == 0:
+                # Target is available at this time
+                suggestions.append({
+                    "target_id": target_id,
+                    "target_name": favorite["name"],
+                    "device_type": favorite["type"],
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "reason": "One of your frequently used targets",
+                    "score": 100 - (hour_offset * 4)  # Score decreases with time
+                })
+                break  # Found an available slot for this target
+    
+    # If we don't have enough suggestions, find other available targets
+    if len(suggestions) < 3:
+        # Query for available targets
+        available_targets_query = select(TargetDevice).filter(
+            TargetDevice.status == DeviceStatus.AVAILABLE
+        )
+        
+        if target_type:
+            available_targets_query = available_targets_query.filter(
+                TargetDevice.device_type == target_type
+            )
+        
+        available_targets_result = await db.execute(available_targets_query)
+        available_targets = available_targets_result.scalars().all()
+        
+        for target in available_targets:
+            # Skip targets already in suggestions
+            if any(s["target_id"] == target.id for s in suggestions):
+                continue
+            
+            # Check availability for next 24 hours in 1-hour increments
+            for hour_offset in range(0, 24):
+                start_time = now + timedelta(hours=hour_offset)
+                end_time = start_time + timedelta(minutes=duration_minutes)
+                
+                # Check for conflicts
+                conflicts_query = select(func.count()).select_from(Reservation).filter(
+                    Reservation.target_id == target.id,
+                    Reservation.status.in_([ReservationStatus.PENDING, ReservationStatus.ACTIVE]),
+                    or_(
+                        and_(
+                            Reservation.start_time <= start_time,
+                            Reservation.end_time > start_time
+                        ),
+                        and_(
+                            Reservation.start_time < end_time,
+                            Reservation.end_time >= end_time
+                        ),
+                        and_(
+                            Reservation.start_time >= start_time,
+                            Reservation.end_time <= end_time
+                        )
+                    )
+                )
+                
+                conflicts_result = await db.execute(conflicts_query)
+                conflicts_count = conflicts_result.scalar()
+                
+                if conflicts_count == 0:
+                    # Target is available at this time
+                    suggestions.append({
+                        "target_id": target.id,
+                        "target_name": target.name,
+                        "device_type": target.device_type,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "reason": "Available target matching your criteria",
+                        "score": 80 - (hour_offset * 4)  # Score decreases with time
+                    })
+                    break  # Found an available slot for this target
+            
+            # If we have enough suggestions, stop
+            if len(suggestions) >= 5:
+                break
+    
+    # Sort suggestions by score
+    suggestions.sort(key=lambda x: x["score"], reverse=True)
+    
+    return suggestions

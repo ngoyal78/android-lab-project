@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 from ..database import Base
+from .policy_associations import user_policies
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
@@ -26,3 +27,4 @@ class User(Base):
     reservations = relationship("Reservation", back_populates="user")
     artifacts = relationship("Artifact", back_populates="user")
     test_jobs = relationship("TestJob", back_populates="user")
+    policies = relationship("ReservationPolicy", secondary=user_policies, back_populates="users")

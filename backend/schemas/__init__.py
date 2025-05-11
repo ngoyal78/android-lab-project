@@ -6,5 +6,9 @@ from .test import (
     TestType, TestStatus, TestJobBase, TestJobCreate, TestJobResponse, 
     TestJobWithDetails, TestLogCreate, TestCompletionCreate, PendingTestResponse
 )
+from .reservation_policy import (
+    ReservationPolicyBase, ReservationPolicyCreate, ReservationPolicyUpdate, 
+    ReservationPolicyResponse, TargetPolicyAssignment, UserPolicyAssignment
+)
 
 # Import all schemas here for easy access
