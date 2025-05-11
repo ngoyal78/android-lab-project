@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import TestJobList from '../components/TestJobList';
 
 interface Target {
   id: string;
@@ -37,17 +38,14 @@ const Dashboard: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
+        // For demo purposes, use mock data directly instead of API calls
         // In a real app, these would be actual API calls
-        const targetsResponse = await axios.get('/api/targets/recent');
-        const testsResponse = await axios.get('/api/tests/recent');
+        // const targetsResponse = await axios.get('/api/targets/recent');
+        // const testsResponse = await axios.get('/api/tests/recent');
+        // setRecentTargets(targetsResponse.data);
+        // setRecentTests(testsResponse.data);
         
-        setRecentTargets(targetsResponse.data);
-        setRecentTests(testsResponse.data);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again later.');
-        
-        // For demo purposes, set some mock data
+        // Mock data for demonstration
         setRecentTargets([
           {
             id: '1',
@@ -97,6 +95,9 @@ const Dashboard: React.FC = () => {
             user: 'john.doe'
           }
         ]);
+      } catch (err) {
+        console.error('Error setting up dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -227,62 +228,24 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Test Runs */}
+      {/* Recent Test Jobs */}
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
           <div>
-            <h2 className="text-lg leading-6 font-medium text-gray-900">Recent Test Runs</h2>
+            <h2 className="text-lg leading-6 font-medium text-gray-900">Recent Test Jobs</h2>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
               Latest test executions on Android targets
             </p>
           </div>
+          <Link
+            to="/tests"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+          >
+            View All
+          </Link>
         </div>
-        <div className="border-t border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Test Name
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Target
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Started By
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {recentTests.map((test) => (
-                <tr key={test.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{test.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{test.targetName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(test.status)}`}>
-                      {test.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {test.user}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(test.startTime).toLocaleString()}
-                    {test.endTime && ` - ${new Date(test.endTime).toLocaleString()}`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="border-t border-gray-200 p-4">
+          <TestJobList limit={5} />
         </div>
       </div>
     </div>

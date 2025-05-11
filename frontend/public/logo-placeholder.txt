@@ -1,0 +1,8 @@
+This file serves as a placeholder for the logo192.png and logo512.png files referenced in the manifest.json.
+
+In a production environment, you would need to create actual PNG image files with the following specifications:
+
+1. logo192.png - 192x192 pixels
+2. logo512.png - 512x512 pixels
+
+These files are used for app icons when the web application is added to the home screen on mobile devices or installed as a PWA (Progressive Web App).

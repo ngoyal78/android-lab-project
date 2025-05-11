@@ -1,0 +1,8 @@
+This file serves as a placeholder for the favicon.ico file referenced in the index.html.
+
+In a production environment, you would need to create an actual ICO file with the following specifications:
+
+- favicon.ico - typically 16x16, 32x32, or 48x48 pixels
+- Multiple sizes can be included in a single ICO file
+
+The favicon is displayed in browser tabs, bookmarks, and other browser UI elements.

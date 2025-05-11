@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   hasRole: (role: string | string[]) => boolean;
+  authToken: string | null;
 }
 
 // Create context with default values
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isAuthenticated: false,
   hasRole: () => false,
+  authToken: null,
 });
 
 // Custom hook to use the auth context
@@ -51,9 +53,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Set default auth header for all requests
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
-          // Fetch user data
-          const response = await axios.get('/api/auth/me');
-          setUser(response.data);
+          // Mock user data based on token for demo purposes
+          // In a real app, this would be an API call to validate the token
+          if (token === 'mock-jwt-token-for-admin') {
+            setUser({
+              id: '1',
+              username: 'admin',
+              email: 'admin@example.com',
+              role: 'Admin'
+            });
+          } else if (token === 'mock-jwt-token-for-developer') {
+            setUser({
+              id: '2',
+              username: 'developer',
+              email: 'developer@example.com',
+              role: 'Developer'
+            });
+          } else if (token === 'mock-jwt-token-for-tester') {
+            setUser({
+              id: '3',
+              username: 'tester',
+              email: 'tester@example.com',
+              role: 'Tester'
+            });
+          } else {
+            // Invalid token
+            localStorage.removeItem('token');
+          }
         }
       } catch (err) {
         console.error('Authentication check failed:', err);
@@ -66,21 +92,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Login function
+  // Login function with mock authentication for demo purposes
   const login = async (username: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post('/api/auth/login', { username, password });
-      const { token, user } = response.data;
-      
-      // Store token and set default auth header
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      setUser(user);
+      // Mock authentication for demo purposes
+      // In a real app, this would be an API call to the backend
+      if (username === 'admin' && password === 'admin123') {
+        const mockUser: User = {
+          id: '1',
+          username: 'admin',
+          email: 'admin@example.com',
+          role: 'Admin'
+        };
+        const mockToken = 'mock-jwt-token-for-admin';
+        
+        // Store token and set default auth header
+        localStorage.setItem('token', mockToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
+        
+        setUser(mockUser);
+      } else if (username === 'developer' && password === 'dev123') {
+        const mockUser: User = {
+          id: '2',
+          username: 'developer',
+          email: 'developer@example.com',
+          role: 'Developer'
+        };
+        const mockToken = 'mock-jwt-token-for-developer';
+        
+        localStorage.setItem('token', mockToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
+        
+        setUser(mockUser);
+      } else if (username === 'tester' && password === 'test123') {
+        const mockUser: User = {
+          id: '3',
+          username: 'tester',
+          email: 'tester@example.com',
+          role: 'Tester'
+        };
+        const mockToken = 'mock-jwt-token-for-tester';
+        
+        localStorage.setItem('token', mockToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
+        
+        setUser(mockUser);
+      } else {
+        throw new Error('Invalid credentials');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
       throw err;
     } finally {
       setLoading(false);
@@ -105,6 +168,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return user.role === role;
   };
 
+  // Get the token from localStorage
+  const authToken = localStorage.getItem('token');
+  
   const value = {
     user,
     loading,
@@ -113,6 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     isAuthenticated: !!user,
     hasRole,
+    authToken,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

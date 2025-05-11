@@ -30,14 +30,12 @@ const TargetList: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
+        // For demo purposes, use mock data directly instead of API calls
         // In a real app, this would be an actual API call
-        const response = await axios.get('/api/targets');
-        setTargets(response.data);
-      } catch (err) {
-        console.error('Error fetching targets:', err);
-        setError('Failed to load targets. Please try again later.');
+        // const response = await axios.get('/api/targets');
+        // setTargets(response.data);
         
-        // For demo purposes, set some mock data
+        // Mock data for demonstration
         setTargets([
           {
             id: '1',
@@ -97,6 +95,9 @@ const TargetList: React.FC = () => {
             lastConnected: '2023-08-15T11:10:00Z'
           }
         ]);
+      } catch (err) {
+        console.error('Error setting up target data:', err);
+        setError('Failed to load targets. Please try again later.');
       } finally {
         setIsLoading(false);
       }

@@ -1,0 +1,714 @@
+openapi: 3.0.0
+info:
+  title: Android Target Management API
+  description: API for managing Android target devices in the lab platform
+  version: 1.0.0
+
+components:
+  schemas:
+    DeviceType:
+      type: string
+      enum:
+        - physical
+        - virtual
+        - emulator
+      description: Type of Android device
+
+    DeviceStatus:
+      type: string
+      enum:
+        - available
+        - reserved
+        - offline
+        - maintenance
+        - unhealthy
+      description: Current status of the device
+
+    NetworkCapability:
+      type: string
+      enum:
+        - wifi
+        - ethernet
+        - cellular
+        - bluetooth
+        - nfc
+      description: Network capability of the device
+
+    TargetDeviceBase:
+      type: object
+      required:
+        - name
+        - gateway_id
+        - device_type
+      properties:
+        name:
+          type: string
+          description: Name of the device
+        gateway_id:
+          type: string
+          description: ID of the gateway that manages this device
+        device_type:
+          $ref: '#/components/schemas/DeviceType'
+        ip_address:
+          type: string
+          format: ipv4
+          description: IP address of the device
+        serial_number:
+          type: string
+          description: Serial number of the device
+        android_version:
+          type: string
+          description: Android OS version
+        api_level:
+          type: integer
+          description: Android API level
+        manufacturer:
+          type: string
+          description: Device manufacturer
+        model:
+          type: string
+          description: Device model
+        location:
+          type: string
+          description: Physical location of the device
+        adb_endpoint:
+          type: string
+          description: ADB endpoint for the device
+        ssh_endpoint:
+          type: string
+          description: SSH endpoint for the device
+        cpu_info:
+          type: object
+          description: CPU information
+        gpu_info:
+          type: object
+          description: GPU information
+        memory_mb:
+          type: integer
+          description: Memory in MB
+        storage_gb:
+          type: integer
+          description: Storage in GB
+        screen_size_inch:
+          type: number
+          format: float
+          description: Screen size in inches
+        screen_resolution:
+          type: string
+          description: Screen resolution (e.g., 1920x1080)
+        network_capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkCapability'
+          description: Network capabilities of the device
+        hal_support:
+          type: object
+          description: HAL support information
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for categorizing the device
+        purpose:
+          type: array
+          items:
+            type: string
+          description: Purpose categories for the device
+
+    TargetDeviceCreate:
+      allOf:
+        - $ref: '#/components/schemas/TargetDeviceBase'
+        - type: object
+          properties:
+            heartbeat_interval_seconds:
+              type: integer
+              default: 10
+              description: Interval in seconds for heartbeat messages
+
+    TargetDeviceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        gateway_id:
+          type: string
+        device_type:
+          $ref: '#/components/schemas/DeviceType'
+        ip_address:
+          type: string
+          format: ipv4
+        serial_number:
+          type: string
+        android_version:
+          type: string
+        api_level:
+          type: integer
+        manufacturer:
+          type: string
+        model:
+          type: string
+        location:
+          type: string
+        adb_endpoint:
+          type: string
+        ssh_endpoint:
+          type: string
+        cpu_info:
+          type: object
+        gpu_info:
+          type: object
+        memory_mb:
+          type: integer
+        storage_gb:
+          type: integer
+        screen_size_inch:
+          type: number
+          format: float
+        screen_resolution:
+          type: string
+        network_capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkCapability'
+        hal_support:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        purpose:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        adb_status:
+          type: boolean
+        serial_status:
+          type: boolean
+        is_active:
+          type: boolean
+        heartbeat_interval_seconds:
+          type: integer
+
+    TargetDeviceResponse:
+      allOf:
+        - $ref: '#/components/schemas/TargetDeviceBase'
+        - type: object
+          required:
+            - id
+            - status
+            - adb_status
+            - serial_status
+            - created_at
+            - is_active
+          properties:
+            id:
+              type: integer
+              description: Unique identifier for the device
+            status:
+              $ref: '#/components/schemas/DeviceStatus'
+            adb_status:
+              type: boolean
+              description: Whether ADB is available for this device
+            serial_status:
+              type: boolean
+              description: Whether serial console is available for this device
+            created_at:
+              type: string
+              format: date-time
+              description: When the device was registered
+            updated_at:
+              type: string
+              format: date-time
+              description: When the device was last updated
+            last_heartbeat:
+              type: string
+              format: date-time
+              description: When the device last sent a heartbeat
+            health_check_timestamp:
+              type: string
+              format: date-time
+              description: When the last health check was performed
+            health_check_status:
+              type: object
+              description: Health check status information
+            health_check_score:
+              type: integer
+              description: Health check score (0-100)
+            heartbeat_interval_seconds:
+              type: integer
+              description: Interval in seconds for heartbeat messages
+            is_active:
+              type: boolean
+              description: Whether the device is active or deactivated
+            created_by:
+              type: integer
+              description: ID of the user who created the device
+            updated_by:
+              type: integer
+              description: ID of the user who last updated the device
+
+    BulkTagRequest:
+      type: object
+      required:
+        - target_ids
+        - tags
+      properties:
+        target_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of the target devices to tag
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags to apply
+        operation:
+          type: string
+          enum:
+            - add
+            - remove
+            - set
+          default: add
+          description: Operation to perform on tags
+
+    BulkPurposeRequest:
+      type: object
+      required:
+        - target_ids
+        - purpose
+      properties:
+        target_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of the target devices to assign purpose to
+        purpose:
+          type: array
+          items:
+            type: string
+          description: Purpose categories to apply
+        operation:
+          type: string
+          enum:
+            - add
+            - remove
+            - set
+          default: add
+          description: Operation to perform on purpose categories
+
+    TargetFilterParams:
+      type: object
+      properties:
+        status:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatus'
+          description: Filter by device status
+        device_type:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceType'
+          description: Filter by device type
+        is_active:
+          type: boolean
+          description: Filter by active status
+        tags:
+          type: array
+          items:
+            type: string
+          description: Filter by tags
+        purpose:
+          type: array
+          items:
+            type: string
+          description: Filter by purpose categories
+        android_version:
+          type: string
+          description: Filter by Android version
+        api_level_min:
+          type: integer
+          description: Filter by minimum API level
+        api_level_max:
+          type: integer
+          description: Filter by maximum API level
+        manufacturer:
+          type: string
+          description: Filter by manufacturer
+        model:
+          type: string
+          description: Filter by model
+        location:
+          type: string
+          description: Filter by location
+        network_capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkCapability'
+          description: Filter by network capabilities
+        health_score_min:
+          type: integer
+          description: Filter by minimum health score
+        search:
+          type: string
+          description: Search term for searching across multiple fields
+
+    ImportTargetsRequest:
+      type: object
+      required:
+        - targets
+      properties:
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetDeviceCreate'
+          description: Target devices to import
+        update_existing:
+          type: boolean
+          default: false
+          description: Whether to update existing targets with matching serial numbers
+
+    ExportTargetsRequest:
+      type: object
+      properties:
+        target_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of the target devices to export (if null, export all)
+        format:
+          type: string
+          enum:
+            - json
+            - csv
+          default: json
+          description: Export format
+        filter:
+          $ref: '#/components/schemas/TargetFilterParams'
+          description: Filter parameters for exporting targets
+
+    ManualRefreshRequest:
+      type: object
+      properties:
+        target_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of the target devices to refresh (if null, refresh all)
+        gateway_id:
+          type: string
+          description: ID of the gateway to refresh targets from
+
+    RemoveStaleTargetsRequest:
+      type: object
+      properties:
+        hours_threshold:
+          type: integer
+          default: 24
+          description: Remove targets with no heartbeat for this many hours
+        gateway_id:
+          type: string
+          description: ID of the gateway to remove stale targets from
+
+paths:
+  /target-management/bulk-tag:
+    post:
+      summary: Apply tags to multiple target devices at once
+      description: Apply tags to multiple target devices at once
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkTagRequest'
+      responses:
+        '200':
+          description: Tags applied successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetDeviceResponse'
+        '401':
+          description: Unauthorized
+        '404':
+          description: No targets found with the provided IDs
+
+  /target-management/bulk-purpose:
+    post:
+      summary: Assign purpose categories to multiple target devices at once
+      description: Assign purpose categories to multiple target devices at once
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkPurposeRequest'
+      responses:
+        '200':
+          description: Purpose categories assigned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetDeviceResponse'
+        '401':
+          description: Unauthorized
+        '404':
+          description: No targets found with the provided IDs
+
+  /target-management/advanced-search:
+    post:
+      summary: Advanced search for target devices with complex filtering
+      description: Advanced search for target devices with complex filtering
+      tags:
+        - target management
+      parameters:
+        - name: skip
+          in: query
+          description: Number of items to skip
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: limit
+          in: query
+          description: Maximum number of items to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetFilterParams'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetDeviceResponse'
+        '401':
+          description: Unauthorized
+
+  /target-management/import:
+    post:
+      summary: Import multiple target devices from a JSON payload
+      description: Import multiple target devices from a JSON payload
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportTargetsRequest'
+      responses:
+        '200':
+          description: Targets imported successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetDeviceResponse'
+        '400':
+          description: No targets provided for import
+        '401':
+          description: Unauthorized
+
+  /target-management/export:
+    post:
+      summary: Export target devices to JSON or CSV format
+      description: Export target devices to JSON or CSV format
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportTargetsRequest'
+      responses:
+        '200':
+          description: Targets exported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  targets:
+                    type: array
+                    items:
+                      type: object
+                    description: Target devices (JSON format only)
+                  csv_data:
+                    type: string
+                    description: CSV data (CSV format only)
+                  count:
+                    type: integer
+                    description: Number of targets exported
+                  format:
+                    type: string
+                    enum:
+                      - json
+                      - csv
+                    description: Export format
+        '400':
+          description: Unsupported export format
+        '401':
+          description: Unauthorized
+
+  /target-management/refresh:
+    post:
+      summary: Trigger a manual refresh of target devices
+      description: Trigger a manual refresh of target devices
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualRefreshRequest'
+      responses:
+        '200':
+          description: Refresh request submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Status message
+                  target_ids:
+                    type: array
+                    items:
+                      type: integer
+                    description: IDs of the target devices to refresh
+                  gateway_id:
+                    type: string
+                    description: ID of the gateway to refresh targets from
+        '401':
+          description: Unauthorized
+
+  /target-management/remove-stale:
+    post:
+      summary: Remove stale target devices that haven't sent a heartbeat in a while
+      description: Remove stale target devices that haven't sent a heartbeat in a while
+      tags:
+        - target management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveStaleTargetsRequest'
+      responses:
+        '200':
+          description: Stale targets removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Status message
+                  count:
+                    type: integer
+                    description: Number of targets removed
+                  target_ids:
+                    type: array
+                    items:
+                      type: integer
+                    description: IDs of the removed targets
+        '401':
+          description: Unauthorized
+
+  /target-management/stats:
+    get:
+      summary: Get statistics about target devices
+      description: Get statistics about target devices
+      tags:
+        - target management
+      responses:
+        '200':
+          description: Target device statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                    description: Total number of target devices
+                  active_count:
+                    type: integer
+                    description: Number of active target devices
+                  inactive_count:
+                    type: integer
+                    description: Number of inactive target devices
+                  status_counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: Count of target devices by status
+                  type_counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: Count of target devices by type
+                  health_counts:
+                    type: object
+                    properties:
+                      excellent:
+                        type: integer
+                      good:
+                        type: integer
+                      fair:
+                        type: integer
+                      poor:
+                        type: integer
+                      unknown:
+                        type: integer
+                    description: Count of target devices by health score
+                  top_tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tag:
+                          type: string
+                        count:
+                          type: integer
+                    description: Most common tags
+                  top_purposes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        purpose:
+                          type: string
+                        count:
+                          type: integer
+                    description: Most common purpose categories
+        '401':
+          description: Unauthorized

@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import ConsoleViewer from '../components/ConsoleViewer';
-import TestRunner from '../components/TestRunner';
+import TestJobForm from '../components/TestJobForm';
+import TestJobList from '../components/TestJobList';
 
 interface Target {
   id: string;
@@ -34,7 +35,7 @@ interface LogEntry {
 }
 
 const TargetDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id = '' } = useParams<{ id: string }>();
   const { user, hasRole } = useAuth();
   const [target, setTarget] = useState<Target | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -435,7 +436,7 @@ const TargetDetail: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <ConsoleViewer targetId={id} />
+                <ConsoleViewer targetId={id} consoleType="adb" />
               )}
             </div>
           </div>
@@ -467,7 +468,13 @@ const TargetDetail: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <TestRunner targetId={id} />
+                <div>
+                  <TestJobForm targetId={parseInt(id)} />
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4">Recent Test Jobs</h3>
+                    <TestJobList targetId={parseInt(id)} limit={5} />
+                  </div>
+                </div>
               )}
             </div>
           </div>

@@ -1,0 +1,8 @@
+# WebSocket client
+websockets>=11.0.2
+
+# HTTP client
+requests>=2.28.2
+
+# Command line parsing
+argparse>=1.4.0
