@@ -108,6 +108,15 @@ const Layout: React.FC = () => {
                 </svg>
                 Virtual Targets
               </Link>
+              <Link
+                to="/topology-editor"
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-primary-700 ${isActive('/topology-editor')}`}
+              >
+                <svg className="mr-3 h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                Topology Editor
+              </Link>
               {hasRole('Admin') && (
                 <Link
                   to="/users"
@@ -259,6 +268,16 @@ const Layout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   Virtual Targets
+                </Link>
+                <Link
+                  to="/topology-editor"
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-md text-white hover:bg-primary-700 ${isActive('/topology-editor')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <svg className="mr-3 h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                  </svg>
+                  Topology Editor
                 </Link>
                 {hasRole('Admin') && (
                   <Link

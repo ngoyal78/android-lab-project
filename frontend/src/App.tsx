@@ -16,6 +16,7 @@ import TargetGatewayAssociations from './pages/TargetGatewayAssociations';
 import ScenarioComposerPage from './pages/ScenarioComposerPage';
 import VirtualTargetOrchestrationPage from './pages/VirtualTargetOrchestrationPage';
 import VirtualTargetOrchestrationTest from './pages/VirtualTargetOrchestrationTest';
+import TopologyEditorPage from './pages/TopologyEditorPage';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -41,6 +42,7 @@ function App() {
             <Route path="scenarios" element={<ScenarioComposerPage />} />
             <Route path="virtual-targets" element={<VirtualTargetOrchestrationPage />} />
             <Route path="virtual-targets-test" element={<VirtualTargetOrchestrationTest />} />
+            <Route path="topology-editor" element={<TopologyEditorPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
