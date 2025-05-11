@@ -14,6 +14,8 @@ import GatewayList from './pages/GatewayList';
 import GatewayDetail from './pages/GatewayDetail';
 import TargetGatewayAssociations from './pages/TargetGatewayAssociations';
 import ScenarioComposerPage from './pages/ScenarioComposerPage';
+import VirtualTargetOrchestrationPage from './pages/VirtualTargetOrchestrationPage';
+import VirtualTargetOrchestrationTest from './pages/VirtualTargetOrchestrationTest';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -37,6 +39,8 @@ function App() {
             <Route path="gateways/:id" element={<GatewayDetail />} />
             <Route path="associations" element={<TargetGatewayAssociations />} />
             <Route path="scenarios" element={<ScenarioComposerPage />} />
+            <Route path="virtual-targets" element={<VirtualTargetOrchestrationPage />} />
+            <Route path="virtual-targets-test" element={<VirtualTargetOrchestrationTest />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
