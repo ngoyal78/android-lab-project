@@ -14,6 +14,8 @@ from .tests import router as tests_router
 from .target_management import router as target_management_router
 from .remote_access import router as remote_access_router
 from .policies import router as policies_router
+from .gateways import router as gateways_router
+from .target_gateway_associations import router as target_gateway_associations_router
 
 __all__ = [
     "auth_router",
@@ -25,5 +27,7 @@ __all__ = [
     "tests_router",
     "target_management_router",
     "remote_access_router",
-    "policies_router"
+    "policies_router",
+    "gateways_router",
+    "target_gateway_associations_router"
 ]

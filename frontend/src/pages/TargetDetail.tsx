@@ -5,6 +5,7 @@ import axios from 'axios';
 import ConsoleViewer from '../components/ConsoleViewer';
 import TestJobForm from '../components/TestJobForm';
 import TestJobList from '../components/TestJobList';
+import TargetGatewayAssociation from '../components/TargetGatewayAssociation';
 
 interface Target {
   id: string;
@@ -39,7 +40,7 @@ const TargetDetail: React.FC = () => {
   const { user, hasRole, authToken } = useAuth();
   const [target, setTarget] = useState<Target | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'info' | 'console' | 'test' | 'logs'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'console' | 'test' | 'logs' | 'gateways'>('info');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -314,6 +315,16 @@ const TargetDetail: React.FC = () => {
           >
             Activity Logs
           </button>
+          <button
+            onClick={() => setActiveTab('gateways')}
+            className={`${
+              activeTab === 'gateways'
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          >
+            Gateways
+          </button>
         </nav>
       </div>
 
@@ -480,6 +491,21 @@ const TargetDetail: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Gateways Tab */}
+        {activeTab === 'gateways' && (
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="px-4 py-5 sm:px-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Gateway Associations</h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Manage gateway associations for this target device.
+              </p>
+            </div>
+            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+              <TargetGatewayAssociation targetId={parseInt(id)} showTitle={false} />
             </div>
           </div>
         )}

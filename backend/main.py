@@ -13,12 +13,12 @@ from dotenv import load_dotenv
 # Try to import using relative imports first (when running as a module)
 # If that fails, fall back to local imports (when running directly from backend directory)
 try:
-    from backend.routers import auth_router, users_router, targets_router, reservations_router, artifacts_router, ws_router, tests_router, target_management_router, remote_access_router, policies_router
+    from backend.routers import auth_router, users_router, targets_router, reservations_router, artifacts_router, ws_router, tests_router, target_management_router, remote_access_router, policies_router, gateways_router, target_gateway_associations_router
     from backend.database import Base, engine
     from backend.middleware import AuditLogMiddleware
 except ModuleNotFoundError:
     # When running from the backend directory
-    from routers import auth_router, users_router, targets_router, reservations_router, artifacts_router, ws_router, tests_router, target_management_router, remote_access_router, policies_router
+    from routers import auth_router, users_router, targets_router, reservations_router, artifacts_router, ws_router, tests_router, target_management_router, remote_access_router, policies_router, gateways_router, target_gateway_associations_router
     from database import Base, engine
     from middleware import AuditLogMiddleware
 
@@ -115,6 +115,8 @@ app.include_router(ws_router)
 app.include_router(tests_router)
 app.include_router(remote_access_router)
 app.include_router(policies_router)
+app.include_router(gateways_router)
+app.include_router(target_gateway_associations_router)
 
 @app.get("/health")
 async def health_check():

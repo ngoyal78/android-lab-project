@@ -10,5 +10,19 @@ from .reservation_policy import (
     ReservationPolicyBase, ReservationPolicyCreate, ReservationPolicyUpdate, 
     ReservationPolicyResponse, TargetPolicyAssignment, UserPolicyAssignment
 )
+from .gateway import (
+    GatewayBase, GatewayCreate, GatewayUpdate, GatewayResponse,
+    GatewayHeartbeatRequest, GatewayDeactivate, BulkTagGatewaysRequest,
+    GatewayFilterParams, ImportGatewaysRequest, ExportGatewaysRequest,
+    GatewayAuditLogResponse, GatewayHierarchyNode, GatewayStatistics,
+    GatewayTargetAssociation, GatewayTargetDisassociation,
+    BulkGatewayTargetAssociation, BulkGatewayTargetDisassociation,
+    GatewayTargetAssociationResponse, GatewayTargetAssociationFilter
+)
+from .target_gateway_association import (
+    AssociationStatus, TargetGatewayAssociationBase, TargetGatewayAssociationCreate,
+    TargetGatewayAssociationUpdate, TargetGatewayAssociation, TargetGatewayAssociationWithDetails,
+    TargetGatewayAssociationBulkCreate, TargetGatewayAssociationBulkDelete, TargetGatewayAssociationFilter
+)
 
 # Import all schemas here for easy access

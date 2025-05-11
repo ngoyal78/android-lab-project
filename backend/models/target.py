@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 import enum
 from ..database import Base
 from .policy_associations import target_policies
+from .gateway import GatewayStatus
 
 class DeviceType(str, enum.Enum):
     PHYSICAL = "physical"
@@ -29,7 +30,7 @@ class TargetDevice(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    gateway_id = Column(String, nullable=False, index=True)
+    gateway_id = Column(String, ForeignKey("gateways.gateway_id"), nullable=False, index=True)
     device_type = Column(Enum(DeviceType), nullable=False)
     ip_address = Column(String, nullable=True)
     serial_number = Column(String, nullable=True, unique=True)
@@ -85,8 +86,15 @@ class TargetDevice(Base):
     reservations = relationship("Reservation", back_populates="target_device")
     test_jobs = relationship("TestJob", back_populates="target")
     policies = relationship("ReservationPolicy", secondary=target_policies, back_populates="targets")
+    gateway = relationship("Gateway", back_populates="targets")
     
     # Audit fields
     is_active = Column(Boolean, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Association fields
+    association_timestamp = Column(DateTime(timezone=True), nullable=True)
+    association_status = Column(String, nullable=True)  # connected, disconnected, error
+    association_details = Column(JSON, nullable=True, default={})
+    association_health = Column(Integer, nullable=True)  # 0-100 score
