@@ -109,6 +109,15 @@ const Layout: React.FC = () => {
                 Virtual Targets
               </Link>
               <Link
+                to="/artifacts"
+                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-primary-700 ${isActive('/artifacts')}`}
+              >
+                <svg className="mr-3 h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                </svg>
+                Artifacts
+              </Link>
+              <Link
                 to="/topology-editor"
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-primary-700 ${isActive('/topology-editor')}`}
               >
@@ -268,6 +277,16 @@ const Layout: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   Virtual Targets
+                </Link>
+                <Link
+                  to="/artifacts"
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-md text-white hover:bg-primary-700 ${isActive('/artifacts')}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <svg className="mr-3 h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                  </svg>
+                  Artifacts
                 </Link>
                 <Link
                   to="/topology-editor"
